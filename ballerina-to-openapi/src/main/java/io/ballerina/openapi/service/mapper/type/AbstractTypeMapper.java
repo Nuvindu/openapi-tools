@@ -17,6 +17,8 @@
  */
 package io.ballerina.openapi.service.mapper.type;
 
+import io.ballerina.compiler.api.ModuleID;
+import io.ballerina.compiler.api.symbols.ModuleSymbol;
 import io.ballerina.compiler.api.symbols.TypeReferenceTypeSymbol;
 import io.ballerina.compiler.api.symbols.TypeSymbol;
 import io.ballerina.openapi.service.mapper.model.AdditionalData;
@@ -26,6 +28,7 @@ import io.swagger.v3.oas.models.media.Schema;
 
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 /**
  * This {@link AbstractTypeMapper} class represents the abstract type mapper.
@@ -55,6 +58,8 @@ public abstract class AbstractTypeMapper {
             return;
         }
         Schema schema = getReferenceSchema(components);
+        getBallerinaPackage(typeSymbol).ifPresent(
+                ballerinaPackage -> schema.addExtension("x-ballerina-type", ballerinaPackage));
         if (Objects.nonNull(schema)) {
             components.addSchemas(name, schema);
         }
@@ -69,5 +74,15 @@ public abstract class AbstractTypeMapper {
         Map<String, Schema> schemas = components.getSchemas();
         return schemas.containsKey(MapperCommonUtils.getTypeName(typeSymbol)) && Objects.nonNull(
                 schemas.get(MapperCommonUtils.getTypeName(typeSymbol)));
+    }
+
+    static Optional<BallerinaPackage> getBallerinaPackage(TypeSymbol typeSymbol) {
+        Optional<ModuleSymbol> module = typeSymbol.getModule();
+        if (module.isEmpty()) {
+            return Optional.empty();
+        }
+        ModuleID moduleID = module.get().id();
+        return Optional.of(new BallerinaPackage(moduleID.orgName(), moduleID.packageName(), moduleID.moduleName(),
+                moduleID.version(), moduleID.modulePrefix()));
     }
 }
